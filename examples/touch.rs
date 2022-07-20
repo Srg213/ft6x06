@@ -47,8 +47,8 @@ fn main() -> ! {
     let mut i2c = I2c::new(
             perif.I2C1,
             (
-                gpioc.pc6.into_alternate().set_open_drain(),
-                gpioc.pc7.into_alternate().set_open_drain(),
+                gpiob.pb6.into_alternate().set_open_drain(),
+                gpiob.pb7.into_alternate().set_open_drain(),
             ),
             400.kHz(),
             &clocks,
