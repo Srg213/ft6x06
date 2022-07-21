@@ -6,11 +6,14 @@ use cortex_m;
 use cortex_m_rt::entry;
 use rtt_target::{rprintln, rtt_init_print};
 use stm32f4xx_hal::{
-    i2c::I2c,
     pac,
     prelude::*,
     rcc::{ Rcc},
 };
+#[cfg(feature = "stm32f412")]
+use stm32f4xx_hal::i2c::I2c;
+#[cfg(feature = "stm32f413")]
+use stm32f4xx_hal::fmpi2c::FMPI2c;
 
 #[allow(unused_imports)]
 use panic_semihosting;
@@ -39,12 +42,11 @@ fn main() -> ! {
     let mut delay = cp.SYST.delay(&clocks);
 
     rprintln!("Connecting to I2c");
-    let gpioc = perif.GPIOC.split();
-    //let scl = gpiob.pb10.into_alternate().set_open_drain(); //LCD_SCL
-    //let sda = gpiob.pb11.into_alternate().set_open_drain(); //LSD_SDA
 
-    let gpiob = perif.GPIOB.split();
-    let mut i2c = I2c::new(
+    #[cfg(feature = "stm32f412")]
+    let mut i2c = {
+        let gpiob = perif.GPIOB.split();
+        I2c::new(
             perif.I2C1,
             (
                 gpiob.pb6.into_alternate().set_open_drain(),
@@ -52,7 +54,21 @@ fn main() -> ! {
             ),
             400.kHz(),
             &clocks,
-        );
+        )
+    };
+    
+    #[cfg(feature = "stm32f413")]
+    let mut i2c = {
+        let gpioc = perif.GPIOC.split();
+        FMPI2c::new(
+            perif.FMPI2C1,
+            (
+                gpioc.pc6.into_alternate().set_open_drain(),
+                gpioc.pc7.into_alternate().set_open_drain(),
+            ),
+            400.kHz(),
+        )
+    };
     
     let mut touch = ft6x06::Ft6X06::new(&i2c, 0x38, &mut delay).unwrap();
 
