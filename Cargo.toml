@@ -16,6 +16,9 @@ cortex-m-rt = ">=0.6.15, <0.8"
 rtt-target = { version = "0.3.1", features = ["cortex-m"] }
 stm32f4xx-hal = "0.13.2"
 panic-semihosting = "0.5.2"
+st7789 = "0.6.1"
+embedded-graphics = "0.7.1"
+display-interface-spi = "0.4"
 
 [profile.dev]
 debug = 1 # default is `true`; not needed if not already overridden
@@ -28,3 +31,4 @@ opt-level = "z"
 [features]
 stm32f412 = ["stm32f4xx-hal/stm32f412"]
 stm32f413 = ["stm32f4xx-hal/stm32f413", "stm32f4xx-hal/fmpi2c1"]
+fsmc_lcd = ["stm32f4xx-hal/fsmc_lcd"]
