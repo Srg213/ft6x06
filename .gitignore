@@ -2,4 +2,5 @@ target/
 **/*.rs.bk
 .idea/*
 *.iml
+**/*.orig
 Cargo.lock
