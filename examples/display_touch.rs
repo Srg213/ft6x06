@@ -2,6 +2,8 @@
 #![no_main]
 #![no_std]
 
+#![allow(unused_variables)]
+
 use cortex_m;
 use cortex_m_rt::entry;
 use rtt_target::{rprintln, rtt_init_print};
@@ -120,6 +122,9 @@ fn main() -> ! {
 
     // Initialise the display and clear the screen
     disp.init(&mut delay).unwrap();
+    rprintln!("{}", disp.orientation() as u8);
+    disp.set_orientation(Orientation::LandscapeSwapped).unwrap();
+    rprintln!("{}", disp.orientation() as u8);
     disp.clear(Rgb565::BLACK).unwrap();
 
     rprintln!("Connecting to I2c");
@@ -184,9 +189,9 @@ fn main() -> ! {
                     n.misc
                 );
 				// Circle with 1 pixel wide white stroke with top-left point at (10, 20) with a diameter of 3
-                Circle::new(Point::new(n.x.into(), n.y.into()), 20)
+                Circle::new(Point::new(<u16 as Into<i32>>::into(n.y), 240 - <u16 as Into<i32>>::into(n.x)), 20)
 				.into_styled(PrimitiveStyle::with_stroke(Rgb565::RED, 1))
-				.draw(&mut disp);
+				.draw(&mut disp).unwrap();
 				}
 			}
     	}
