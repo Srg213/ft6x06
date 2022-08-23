@@ -9,7 +9,10 @@ description = "A platform agnostic driver for the FT6x06 type touch screen drive
 [dependencies]
 embedded-hal = "0.2.7"
 cortex-m = "0.7"
+heapless = "0.7"
+panic-semihosting = "0.5.3"
 panic-probe = { version = "0.2", features = ["print-rtt"] }
+rtt-target = { version = "0.3.1", features = ["cortex-m"] }
 
 [dev-dependencies]
 cortex-m-rt = ">=0.6.15, <0.8"
@@ -32,3 +35,26 @@ opt-level = "z"
 stm32f412 = ["stm32f4xx-hal/stm32f412"]
 stm32f413 = ["stm32f4xx-hal/stm32f413", "stm32f4xx-hal/fmpi2c1"]
 fsmc_lcd = ["stm32f4xx-hal/fsmc_lcd"]
+gesture = []
+
+[[example]]
+name = "touch"
+
+[[example]]
+name = "multi_touch"
+
+[[example]]
+name = "gesture_control"
+required-features = ["fsmc_lcd"]
+
+[[example]]
+name = "interface"
+required-features = ["fsmc_lcd"]
+
+[[example]]
+name = "display_touch"
+required-features = ["fsmc_lcd"]
+
+[[example]]
+name = "glogic"
+

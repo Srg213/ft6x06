@@ -183,7 +183,7 @@ pub const FT6X06_OK                      : u8 = 0;
 pub const FT6X06_ERROR                   : i8 = -1;
 
 /// Max detectable simultaneous touches 
-pub const FT6X06_MAX_NB_TOUCH            : u8 =  2;
+pub const FT6X06_MAX_NB_TOUCH            : usize =  2;
   
 /// Touch FT6XX6 IDs 
 pub const FT6X06_ID                      : u8 = 0x11;
