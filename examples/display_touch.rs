@@ -123,10 +123,11 @@ fn main() -> ! {
     // Initialise the display and clear the screen
     disp.init(&mut delay).unwrap();
     rprintln!("{}", disp.orientation() as u8);
-    disp.set_orientation(Orientation::LandscapeSwapped).unwrap();
-    rprintln!("{}", disp.orientation() as u8);
     disp.clear(Rgb565::BLACK).unwrap();
-
+	
+	
+	//Intializing the i2c bus for touchscreen
+	
     rprintln!("Connecting to I2c");
 
     #[cfg(feature = "stm32f412")]
@@ -154,6 +155,8 @@ fn main() -> ! {
         )
     };
     
+    //ft6x06 driver
+
     let mut touch = ft6x06::Ft6X06::new(&i2c, 0x38, &mut delay).unwrap();
 	
 	let tsc = touch.ts_calibration(&mut i2c);

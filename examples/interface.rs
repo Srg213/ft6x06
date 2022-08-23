@@ -172,7 +172,7 @@ fn main() -> ! {
                 gpioc.pc6.into_alternate().set_open_drain(),
                 gpioc.pc7.into_alternate().set_open_drain(),
             ),
-            400.kHz(),
+            10.kHz(),
         )
     };
     

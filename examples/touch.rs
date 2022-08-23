@@ -42,7 +42,9 @@ fn main() -> ! {
     let mut delay = cp.SYST.delay(&clocks);
 
     rprintln!("Connecting to I2c");
-
+	
+	
+	///STM32F412 touchscreen controller uses I2C1 module from embedded-hal. 
     #[cfg(feature = "stm32f412")]
     let mut i2c = {
         let gpiob = perif.GPIOB.split();
@@ -52,11 +54,13 @@ fn main() -> ! {
                 gpiob.pb6.into_alternate().set_open_drain(),
                 gpiob.pb7.into_alternate().set_open_drain(),
             ),
-            400.kHz(),
+            10.kHz(),
             &clocks,
         )
     };
     
+    
+    ///STM32F413 shares the same I2C bus for both audio driver and touchscreen controller. FMPI2C module from embedded-hal is used. 
     #[cfg(feature = "stm32f413")]
     let mut i2c = {
         let gpioc = perif.GPIOC.split();
@@ -66,14 +70,19 @@ fn main() -> ! {
                 gpioc.pc6.into_alternate().set_open_drain(),
                 gpioc.pc7.into_alternate().set_open_drain(),
             ),
-            400.kHz(),
+            5.kHz(),
         )
     };
     
     let mut touch = ft6x06::Ft6X06::new(&i2c, 0x38, &mut delay).unwrap();
-
+	
+	let tsc = touch.ts_calibration(&mut i2c);
+	match tsc {
+		 Err(e) => rprintln!("Error {} from ts_calibration", e),
+		 Ok(u) => rprintln!("ts_calibration returned {}", u),
+	}
     rprintln!("If nothing happens - touch the screen!");
-    // for _i in 0..3000 {
+
     loop {
         let t = touch.detect_touch(&mut i2c);
         let mut num: u8 = 0;
@@ -102,6 +111,8 @@ fn main() -> ! {
         }
     }
 }
+
+
 // touch.test(&mut i2c);
 // rprintln!("Returned from test");
 
@@ -125,11 +136,6 @@ fn main() -> ! {
 //     Ok(u) => rprintln!("td_status returned {}", u),
 // }
 
-// let tsc = touch.ts_calibration(&mut i2c);
-// match tsc {
-//     Err(e) => rprintln!("Error {} from ts_calibration", e),
-//     Ok(u) => rprintln!("ts_calibration returned {}", u),
-// }
 
 // let cid = touch.chip_id(&mut i2c);
 // match cid {
