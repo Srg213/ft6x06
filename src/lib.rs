@@ -26,6 +26,7 @@ pub mod gesture;
 #[cfg(feature = "gesture")]
 use heapless::Vec;
 
+#[allow(unused_imports)]
 use panic_semihosting as _;
 
 use embedded_hal as hal;
@@ -33,8 +34,6 @@ use hal::blocking::{delay::DelayMs, i2c};
 
 use core::marker::PhantomData;
 use crate::constant::*;
-
-use rtt_target::{rprintln, rtt_init_print};
 
 
 #[derive(Copy, Clone, Debug)]

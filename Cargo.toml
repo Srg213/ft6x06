@@ -10,9 +10,8 @@ description = "A platform agnostic driver for the FT6x06 type touch screen drive
 embedded-hal = "0.2.7"
 cortex-m = "0.7"
 heapless = {version = "0.7", optional =true}	
-panic-semihosting = "0.5.3"
 panic-probe = { version = "0.2", features = ["print-rtt"] }
-rtt-target = { version = "0.3.1", features = ["cortex-m"] }
+
 
 [dev-dependencies]
 cortex-m-rt = ">=0.6.15, <0.8"
