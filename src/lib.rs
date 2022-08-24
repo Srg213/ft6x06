@@ -22,10 +22,10 @@
 pub mod constant;
 #[cfg(feature = "gesture")]
 pub mod gesture;
-extern crate heapless;
 
 #[cfg(feature = "gesture")]
 use heapless::Vec;
+
 use panic_semihosting as _;
 
 use embedded_hal as hal;
