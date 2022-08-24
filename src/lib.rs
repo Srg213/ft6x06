@@ -26,7 +26,7 @@ pub mod gesture;
 #[cfg(feature = "gesture")]
 use heapless::Vec;
 
-[#allow(unused_imports)]
+#[allow(unused_imports)]
 use panic_semihosting as _;
 
 use embedded_hal as hal;
