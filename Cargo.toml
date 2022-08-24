@@ -57,4 +57,4 @@ required-features = ["fsmc_lcd"]
 
 [[example]]
 name = "glogic"
-
+required-features = ["fsmc_lcd","gesture"]

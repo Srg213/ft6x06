@@ -24,6 +24,7 @@ pub mod constant;
 pub mod gesture;
 extern crate heapless;
 
+#[cfg(feature = "gesture")]
 use heapless::Vec;
 use panic_semihosting as _;
 
@@ -535,7 +536,7 @@ where
 		}
 	}
 
-
+	#[cfg(feature="gesture")]
 	pub fn gest_logic(&mut self, i2c:&mut I2C, sec: u16) -> Result<GestureKind,&str>{
 		
 		let mut vec1: Vec<u16, 100> = Vec::new();
