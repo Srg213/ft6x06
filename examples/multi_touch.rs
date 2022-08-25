@@ -1,8 +1,10 @@
+
 #![no_main]
 #![no_std]
 
-/// A basic example to show the use of ft6x06 crate using STM32F412/3 board
-/// This example shows how to get touch coordinates.
+/// An example to use access Ft6x06 driver and get coordinates for
+/// multiple touch points.
+
 use cortex_m;
 use cortex_m_rt::entry;
 use rtt_target::{rprintln, rtt_init_print};
@@ -17,7 +19,6 @@ use panic_semihosting;
 
 extern crate ft6x06;
 
-#[entry]
 fn main() -> ! {
     rtt_init_print!();
     rprintln!("Started");
@@ -32,7 +33,6 @@ fn main() -> ! {
 
     rprintln!("Connecting to I2c");
 
-    // STM32F412 touchscreen controller uses I2C1 module from embedded-hal.
     #[cfg(feature = "stm32f412")]
     let mut i2c = {
         let gpiob = perif.GPIOB.split();
@@ -42,12 +42,11 @@ fn main() -> ! {
                 gpiob.pb6.into_alternate().set_open_drain(),
                 gpiob.pb7.into_alternate().set_open_drain(),
             ),
-            10.kHz(),
+            400.kHz(),
             &clocks,
         )
     };
 
-    // STM32F413 shares the same I2C bus for both audio driver and touchscreen controller. FMPI2C module from embedded-hal is used.
     #[cfg(feature = "stm32f413")]
     let mut i2c = {
         let gpioc = perif.GPIOC.split();
@@ -57,7 +56,7 @@ fn main() -> ! {
                 gpioc.pc6.into_alternate().set_open_drain(),
                 gpioc.pc7.into_alternate().set_open_drain(),
             ),
-            5.kHz(),
+            400.kHz(),
         )
     };
 
@@ -69,7 +68,7 @@ fn main() -> ! {
         Ok(u) => rprintln!("ts_calibration returned {}", u),
     }
     rprintln!("If nothing happens - touch the screen!");
-
+    // for _i in 0..3000 {
     loop {
         let t = touch.detect_touch(&mut i2c);
         let mut num: u8 = 0;
@@ -84,18 +83,26 @@ fn main() -> ! {
         }
 
         if num > 0 {
-            let t = touch.get_touch(&mut i2c, 1);
+            let t = touch.get_multi_touch(&mut i2c, 1);
             match t {
                 Err(_e) => rprintln!("Error fetching touch data"),
-                Ok(n) => rprintln!(
-                    "Touch: {:>3}x{:>3} - weight: {:>3} misc: {}",
-                    n.x,
-                    n.y,
-                    n.weight,
-                    n.misc
-                ),
+                Ok(n) => {
+                    rprintln!(
+                        "Touch: {:>3}x{:>3} - weight: {:>3} misc: {}",
+                        n.touch_x[0],
+                        n.touch_y[0],
+                        n.touch_weight[0],
+                        n.touch_area[0],
+                    );
+                    rprintln!(
+                        "Touch: {:>3}x{:>3} - weight: {:>3} misc: {}",
+                        n.touch_x[0],
+                        n.touch_y[1],
+                        n.touch_weight[1],
+                        n.touch_area[1],
+                    )
+                }
             }
         }
     }
 }
-

@@ -3,8 +3,17 @@ name = "ft6x06"
 version = "0.1.0"
 edition = "2021"
 authors = ["Shantanu Gaikwad"]
-categories = ["embedded", "no-std"]
-description = "A platform agnostic driver for the FT6x06 type touch screen driver used on STM32F413 board."
+categories = ["embedded", "no-std", "hardware-support"]
+description = "A platform agnostic driver for the FT6x06 type touch panel controller used on STM32F4 series board."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Srg213/ft6x06"
+keywords = [
+    "embedded-hal-driver",
+    "embedded-hal",
+    "FT6x06",
+    "touchscreen",
+]
+readme = "README.md"
 
 [dependencies]
 embedded-hal = "0.2.7"
@@ -41,10 +50,6 @@ name = "touch"
 
 [[example]]
 name = "multi_touch"
-
-[[example]]
-name = "gesture_control"
-required-features = ["fsmc_lcd"]
 
 [[example]]
 name = "interface"
