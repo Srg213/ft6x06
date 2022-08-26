@@ -34,14 +34,8 @@ use panic_semihosting;
 use ft6x06;
 use st7789::*;
 
-/// A simple example to connect to the FT6x06 crate and access it for
-/// x and y positions of touch points. There are a lot of commented-out
-/// calls to items in the library, but they're a bit pointless. I couldn't
-/// get the gesture stuff to work - I couldn't even get an I2C register change
-/// to take place. I didn't try for the other functions like Events.
-///
-/// It works for me - if you get more working, please send a PR.
-/// My approach to Results is also a bit ad-hoc.
+/// A simple example to connect to the FT6x06 crate and get the touch coordinates.
+/// This example uses embedded-graphics to draw a small circle around the touch area.
 #[entry]
 fn main() -> ! {
     rtt_init_print!();
@@ -160,7 +154,6 @@ fn main() -> ! {
         Ok(u) => rprintln!("ts_calibration returned {}", u),
     }
     rprintln!("If nothing happens - touch the screen!");
-    // for _i in 0..3000 {
     loop {
         let t = touch.detect_touch(&mut i2c);
         let mut num: u8 = 0;
@@ -190,6 +183,7 @@ fn main() -> ! {
                     // Circle with 1 pixel wide white stroke with top-left point at (10, 20) with a diameter of 3
                     Circle::new(
                         Point::new(
+                        	// The coordinates are flipped.
                             <u16 as Into<i32>>::into(n.y),
                             240 - <u16 as Into<i32>>::into(n.x),
                         ),

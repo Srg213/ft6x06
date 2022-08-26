@@ -1,8 +1,11 @@
-// #![deny(warnings)]
 #![no_main]
 #![no_std]
 #![allow(unused_variables)]
 
+// #![deny(warnings)]
+/// A simple example to connect to the FT6x06 crate on stm32f412/3 board and get the touch data to evaluate
+/// which option is clicked by the user. This can be considered as interface
+/// for user to give an input.
 use cortex_m;
 use cortex_m_rt::entry;
 use rtt_target::{rprintln, rtt_init_print};
@@ -36,14 +39,6 @@ use panic_semihosting;
 use ft6x06;
 use st7789::*;
 
-/// A simple example to connect to the FT6x06 crate and access it for
-/// x and y positions of touch points. There are a lot of commented-out
-/// calls to items in the library, but they're a bit pointless. I couldn't
-/// get the gesture stuff to work - I couldn't even get an I2C register change
-/// to take place. I didn't try for the other functions like Events.
-///
-/// It works for me - if you get more working, please send a PR.
-/// My approach to Results is also a bit ad-hoc.
 #[entry]
 fn main() -> ! {
     rtt_init_print!();
@@ -185,7 +180,6 @@ fn main() -> ! {
     }
     rprintln!("If nothing happens - touch the screen!");
 
-    // for _i in 0..3000 {
     loop {
         let t = touch.detect_touch(&mut i2c);
         let mut num: u8 = 0;

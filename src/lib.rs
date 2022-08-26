@@ -12,7 +12,7 @@
 //! 		let mut touch = ft6x06::Ft6X06::new(&i2c, ).unwrap();
 //!
 //!	To detect single touch, use the following snippet,
-//! 
+//!
 //! 	   let t = touch.detect_touch(&mut i2c);
 //!        let mut num: u8 = 0;
 //!        match t {
@@ -76,21 +76,14 @@ const FALSE: bool = false;
 
 const FT6X06_CAPABILITIES: Ft6x06Capabilities = Ft6x06Capabilities {
     multi_touch: TRUE,
+    //  Gesture is not set as per given in ft6x06 crate by STMicroelectronics
     gesture: FALSE,
     max_touch: FT6X06_MAX_NB_TOUCH as u8,
     max_x_length: FT6X06_MAX_X_LENGTH,
     may_y_length: FT6X06_MAX_Y_LENGTH,
 };
 
-/// Touch structure - derived from the available I2C registers
-/// There are ten available touch registers on the chip, but also
-/// a defined maximum of 2 in FT6X06_MAX_NB_TOUCH above.
-/// The touch registers occur in banks of 6, for each of the ten
-/// potential touches, defined as follows, and the registers are
-/// contiguous. That means that a single read can get all of the
-/// data for one touch, or all of the data for all the touches.
-/// In the absence of documentation on the MISC register, it is being
-/// ignored.
+/// Touch structure - derived from the available I2C registers.
 // #define FT6X06_P1_XH_REG            0x03U
 // #define FT6X06_P1_XL_REG            0x04U
 // #define FT6X06_P1_YH_REG            0x05U
@@ -128,7 +121,7 @@ pub struct MultiTouch {
 }
 
 #[derive(Debug)]
-/// When a gesture is polled it could be one of these:
+/// Possible choices of gesture
 pub enum GestureKind {
     /// No gesture detected
     None,
@@ -148,24 +141,25 @@ pub enum GestureKind {
     Fault,
 }
 
-/// Gestures don't seem to work using values of control registers and reading radian_value_reg.
-/// I tried working with the GestureInit struct and i2c bus to read gestures but failed. 
-/// I removed its impl but kept the struct to give idea of how it is implementated in C.
-/// The code for gestures was tried in ft5336 repo by bobgates,
-/// but it seems control register values are not read by i2c.
-/// So I created a algoritmic to detect gesture.
+// Gestures don't seem to work using values of control registers and reading radian_value_reg.
+// I tried working with the GestureInit struct and i2c bus to read gestures but failed.
+// I removed its impl but kept the struct to give idea of how it is implementated in C.
+// This code for gestures is taken from ft5336 repo by bobgates,
+// but it seems control register values are not read in buffer of i2c bus.
+// So I created a algoritmic to detect gesture. The following struct just shows how 
+// the gestures registers are to set.
 
-/// Structure that holds the values for a gesture
-/// The name is what's in the c code.
-/// The register definitions are:
-/// pub const FT6X06_RADIAN_VALUE_REG: u8 = 0x91;
-/// pub const FT6X06_OFFSET_LR_REG: u8 = 0x92;
-/// pub const FT6X06_OFFSET_UD_REG: u8 = 0x93;
-/// pub const FT6X06_DISTANCE_LR_REG: u8 = 0x94;
-/// pub const FT6X06_DISTANCE_UD_REG: u8 = 0x95;
-/// pub const FT6X06_DISTANCE_ZOOM_REG: u8 = 0x96;
+// Structure that holds the values for a gesture
+// The name is what's in the c code.
+// The register definitions are:
+// pub const FT6X06_RADIAN_VALUE_REG: u8 = 0x91;
+// pub const FT6X06_OFFSET_LR_REG: u8 = 0x92;
+// pub const FT6X06_OFFSET_UD_REG: u8 = 0x93;
+// pub const FT6X06_DISTANCE_LR_REG: u8 = 0x94;
+// pub const FT6X06_DISTANCE_UD_REG: u8 = 0x95;
+// pub const FT6X06_DISTANCE_ZOOM_REG: u8 = 0x96;
 
-
+#[allow(dead_code)]
 pub struct GestureInit<I2C> {
     addr: u8,
     i2c: PhantomData<I2C>,
@@ -184,112 +178,8 @@ pub struct GestureInit<I2C> {
     pub distance_zoom: u8,
 }
 
-/// I wasn't able to get gestures to work. I suspect something is required in
-/// the control register, but I don't know what. Also, this STM page (for nominally the same device):
-/// <https://github.com/ryankurte/stm32-base/blob/master/drivers/BSP/Components/ft6X06/ft6X06.c>
-/// has a different set of gestures available to the list above.
-impl<'b, I2C, E> GestureInit<I2C>
-where
-    I2C: i2c::WriteRead<Error = E> + i2c::Write<Error = E> + i2c::Read<Error = E>,
-{
-    /// Initialise. Takes the I2C address just to avoid transferring it all the time.
-    /// It turns out the gesture init registers are contiguous, see comment above
-    /// or definitions of FT6X06_RADIAN_VALUE_REG and what follow, so they're also
-    /// in the initialiser.
-    ///
-    /// This code didn't work in the STM32F7 Discovery - It wouldn't read parameters set.
-    pub fn new(addr: u8) -> GestureInit<I2C> {
-        GestureInit {
-            i2c: PhantomData,
-            addr,
-            radian: 0,
-            offset_left_right: 0,
-            offset_up_down: 0,
-            distance_left_right: 0,
-            distance_up_down: 0,
-            distance_zoom: 0,
-        }
-    }
-
-    /// Fill the gesture struct with the values held for it on the
-    /// touchscreen
-    pub fn read(&mut self, i2c: &mut I2C) -> Result<&str, &str> {
-        let mut buf: [u8; 6] = [4; 6];
-
-        let result = i2c.write_read(self.addr, &[FT6X06_RADIAN_VALUE_REG], &mut buf);
-
-        rprintln!(
-            "Gesture read buf values: {}  {} {} {} {} {} ",
-            buf[0],
-            buf[1],
-            buf[2],
-            buf[3],
-            buf[4],
-            buf[5],
-        );
-
-        match result {
-            Err(_e) => Err("Error reading gesture init registers"),
-            Ok(_d) => {
-                self.radian = buf[0];
-                self.offset_left_right = buf[1];
-                self.offset_up_down = buf[2];
-                self.distance_left_right = buf[3];
-                self.distance_up_down = buf[4];
-                self.distance_zoom = buf[5];
-                Ok("Success reading gesture init")
-            }
-        }
-    }
-
-    /// Write the six parameters of the gesture_init type into the FT6206
-    pub fn write(
-        &mut self,
-        i2c: &mut I2C,
-        radian: u8,
-        offset_lr: u8,
-        offset_ud: u8,
-        dist_lr: u8,
-        dist_up: u8,
-        zoom: u8,
-    ) -> Result<&str, &str> {
-        let mut entries: [u8; 6] = [radian, offset_lr, offset_ud, dist_lr, dist_up, zoom];
-
-        rprintln!(
-            "Gesture write entries values before: {}  {} {} {} {} {} ",
-            entries[0],
-            entries[1],
-            entries[2],
-            entries[3],
-            entries[4],
-            entries[5],
-        );
-
-        let result = i2c.write_read(self.addr, &mut [FT6X06_RADIAN_VALUE_REG], &mut entries);
-
-        rprintln!(
-            "Gesture write entries values: {}  {} {} {} {} {} ",
-            entries[0],
-            entries[1],
-            entries[2],
-            entries[3],
-            entries[4],
-            entries[5],
-        );
-
-        if let Err(_g) = result {
-            Err("Error setting address in GestureInit")
-        } else {
-            // let result = i2c.write(self.addr, &mut entries);
-            // match result {
-            // Err(_e) => Err("Error writing GestureInit"),
-            Ok("Okay writing GestureInit")
-            // }
-        }
-    }
-}
-
-/// FT6x06 driver
+/// FT6x06 driver object.
+/// I2C bus type and its address are set.
 pub struct Ft6X06<I2C> {
     i2c: PhantomData<I2C>,
     addr: u8,
@@ -320,7 +210,6 @@ where
         // FT6X06_DisableIT(i2c)?;
         // Ok(*self)
     }
-
 
     ///As the ft6X06 library owns the delay, the simplest way to
     /// deliver it to the callign code seems to be to return a function call.
@@ -550,57 +439,57 @@ where
         }
     }
 
-    /// Gesture logic for getting the position.
-    #[cfg(feature = "gesture")]
-    pub fn gest_logic(&mut self, i2c: &mut I2C, sec: u16) -> Result<GestureKind, &str> {
-        let mut vec1: Vec<u16, 100> = Vec::new();
-        let mut vec2: Vec<u16, 100> = Vec::new();
-
-        for _i in 1..20 {
-            let a = self.get_coordinates(i2c);
-
-            match a {
-                Err(_e) => {
-                    rprintln!("err");
-                    continue;
-                }
-                Ok((x, y)) => {
-                    vec1.push(x).expect("err");
-                    vec2.push(y).expect("err");
-                }
-            };
-        }
-        let itr1 = vec1.iter();
-        let itr2 = vec2.iter();
-
-        let max_x: u16 = *itr1.max().expect("err");
-        let max_y: u16 = *itr2.max().expect("err");
-
-        let start_x: u16 = vec1[0];
-        let start_y: u16 = vec2[0];
-
-        let end_x: u16 = vec1[19];
-        let end_y: u16 = vec2[19];
-
-        let diff_x = end_x - start_x;
-        let diff_y = end_y - start_y;
-
-        if diff_x > 100 || diff_y > 100 {
-            return Err("wrong gestures.");
-        } else if diff_x > diff_y {
-            if diff_x > 0 {
-                return Ok(GestureKind::Right);
-            } else {
-                return Ok(GestureKind::Left);
-            }
-        } else if diff_x < diff_y {
-            if diff_y > 0 {
-                return Ok(GestureKind::Up);
-            } else {
-                return Ok(GestureKind::Left);
-            }
-        } else {
-            return Err("error gesture");
-        }
-    }
+//    /// Logic for getting the gesture.
+//    #[cfg(feature = "gesture")]
+//    pub fn gest_logic(&mut self, i2c: &mut I2C) -> Result<GestureKind, &str> {
+//        let mut vec1: Vec<u16, 100> = Vec::new();
+//        let mut vec2: Vec<u16, 100> = Vec::new();
+//
+//        for _i in 1..20 {
+//            let a = self.get_coordinates(i2c);
+//
+//           match a {
+//                Err(_e) => {
+//                    rprintln!("err");
+//                    continue;
+//                }
+//                Ok((x, y)) => {
+//                    vec1.push(x).expect("err");
+//                    vec2.push(y).expect("err");
+//                }
+//            };
+//        }
+//        let itr1 = vec1.iter();
+//        let itr2 = vec2.iter();
+//
+//        let max_x: u16 = *itr1.max().expect("err");
+//        let max_y: u16 = *itr2.max().expect("err");
+//
+//        let start_x: u16 = vec1[0];
+//        let start_y: u16 = vec2[0];
+//
+//        let end_x: u16 = vec1[19];
+//        let end_y: u16 = vec2[19];
+//
+//        let diff_x = end_x - start_x;
+//        let diff_y = end_y - start_y;
+//
+//        if diff_x > 100 || diff_y > 100 {
+//            return Err("wrong gestures.");
+//        } else if diff_x > diff_y {
+//            if diff_x > 0 {
+//                return Ok(GestureKind::Right);
+//            } else {
+//                return Ok(GestureKind::Left);
+//            }
+//        } else if diff_x < diff_y {
+//            if diff_y > 0 {
+//                return Ok(GestureKind::Up);
+//            } else {
+//                return Ok(GestureKind::Left);
+//            }
+//        } else {
+//            return Err("error gesture");
+//        }
+//    }
 }
