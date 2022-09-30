@@ -54,7 +54,8 @@ use heapless::Vec;
 use crate::constant::*;
 use core::marker::PhantomData;
 use embedded_hal as hal;
-use hal::blocking::{delay::DelayMs, i2c};
+use hal::blocking::{delay::{DelayMs, DelayUs}, i2c};
+use hal::digital::v2::OutputPin;
 use rtt_target::rprintln;
 
 #[derive(Copy, Clone, Debug)]
@@ -183,6 +184,27 @@ pub struct GestureInit<I2C> {
 pub struct Ft6X06<I2C> {
     i2c: PhantomData<I2C>,
     addr: u8,
+}
+
+/// Perform a long hard reset, the FT66206 needs at least 5mS ...
+//
+// - On the STM32F413 the touchscreen shares the reset GPIO pin w/ the LCD.
+// - The ST7789 driver uses a fast (10uS) reset.
+// - The touchscreen controller needs 5mS:
+//   https://www.displayfuture.com/Display/datasheet/controller/FT6206.pdf
+pub fn long_hard_reset<'a, RST, DELAY>(
+    rst: &'a mut RST,
+    delay: &'a mut DELAY,
+) -> Result<(), &'a str> 
+where
+    RST: OutputPin,
+    DELAY: DelayUs<u32>,
+{
+    rst.set_low().map_err(|_| "rst.set_low failed")?;
+    delay.delay_us(10_000);
+    rst.set_high().map_err(|_| "rst.set_high failed")?;
+
+    Ok(())
 }
 
 impl<I2C, E> Ft6X06<I2C>
