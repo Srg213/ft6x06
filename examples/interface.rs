@@ -115,6 +115,7 @@ fn main() -> ! {
 
     // Initialise the display and clear the screen
     disp.init(&mut delay).unwrap();
+    disp.set_orientation(Orientation::Portrait).unwrap();
     rprintln!("{}", disp.orientation() as u8);
     disp.clear(Rgb565::BLACK).unwrap();
 
