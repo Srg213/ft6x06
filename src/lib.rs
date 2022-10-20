@@ -209,7 +209,7 @@ where
 
 impl<I2C, E> Ft6X06<I2C>
 where
-    I2C: i2c::WriteRead<Error = E> + i2c::Write<Error = E>,
+    I2C: i2c::WriteRead<Error = E> + i2c::Write<Error = E>, E: core::fmt::Debug
 {
     /// Creates a new sensor associated with an I2C peripheral.
     ///
@@ -272,6 +272,20 @@ where
         i2c.write(self.addr, &[tmp])?;
 
         Ok(value == 0)
+    }
+
+    /// Get the value of an 8 bit register
+    pub fn get_u8_reg(&self, i2c: &mut I2C, reg: u8) -> Result<u8, E> {
+        let mut ibuf: [u8; 1] = [0];
+        i2c.write_read(self.addr, &[reg], &mut ibuf)?;
+        Ok(ibuf[0])
+    }
+
+    /// Set the value of an 8 bit register
+    pub fn set_u8_reg(&self, i2c: &mut I2C, reg: u8, val: u8) -> Result<(), E> {
+        let obuf: [u8; 2] = [reg, val];
+        i2c.write(self.addr, &obuf)?;
+        Ok(())
     }
 
     /// Run an internal calibration on the FT6X06
