@@ -56,7 +56,6 @@ use core::marker::PhantomData;
 use embedded_hal as hal;
 use hal::blocking::{delay::{DelayMs, DelayUs}, i2c};
 use hal::digital::v2::OutputPin;
-use rtt_target::rprintln;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Ft6x06Capabilities {
@@ -181,9 +180,10 @@ pub struct GestureInit<I2C> {
 
 /// FT6x06 driver object.
 /// I2C bus type and its address are set.
-pub struct Ft6X06<I2C> {
+pub struct Ft6X06<I2C, TouchInterruptPin> {
     i2c: PhantomData<I2C>,
     addr: u8,
+    interrupt: TouchInterruptPin,
 }
 
 /// Perform a long hard reset, the FT66206 needs at least 5mS ...
@@ -207,17 +207,18 @@ where
     Ok(())
 }
 
-impl<I2C, E> Ft6X06<I2C>
+impl<I2C, TouchInterruptPin: embedded_hal::digital::v2::InputPin, E> Ft6X06<I2C, TouchInterruptPin>
 where
     I2C: i2c::WriteRead<Error = E> + i2c::Write<Error = E>, E: core::fmt::Debug
 {
     /// Creates a new sensor associated with an I2C peripheral.
     ///
     /// Phantom I2C ensures that whatever I2C bus the device was created on is the one that is used for all future interations.
-    pub fn new(_i2c: &I2C, addr: u8) -> Result<Self, E> {
+    pub fn new(_i2c: &I2C, addr: u8, interrupt: TouchInterruptPin) -> Result<Self, E> {
         let ft6x06 = Ft6X06 {
             i2c: PhantomData,
             addr: addr,
+            interrupt,
         };
         Ok(ft6x06)
     }
@@ -288,6 +289,11 @@ where
         Ok(())
     }
 
+    /// Wait for the touchscreen interrupt to indicate touches
+    pub fn wait_touch_interrupt(&self) {
+        while self.interrupt.is_high().unwrap_or_else(|_| panic!("trouble checking interrupt")) {}
+    }
+
     /// Run an internal calibration on the FT6X06
     pub fn ts_calibration(
         &mut self,
@@ -342,17 +348,13 @@ where
     }
 
     /// Is the device being touched? If so, how many fingers?
-    pub fn detect_touch(&mut self, i2c: &mut I2C) -> Result<u8, &str> {
-        match self.td_status(i2c) {
-            Err(_e) => Err("Error getting touch data"),
-            Ok(n) => {
-                if n <= FT6X06_MAX_NB_TOUCH as u8 {
-                    Ok(n)
-                } else {
-                    Ok(0)
-                }
-            }
-        }
+    pub fn detect_touch(&mut self, i2c: &mut I2C) -> Result<u8, E> {
+        let ntouch = loop {
+            let n = self.td_status(i2c)?;
+            if n > 0 { break n; }
+        };
+        assert!(ntouch <= FT6X06_MAX_NB_TOUCH as u8);
+        Ok(ntouch)
     }
 
     /// Retrieve the FT6X06 firmware id
@@ -448,31 +450,11 @@ where
         Ok(g)
     }
 
-    pub fn get_coordinates(&mut self, i2c: &mut I2C) -> Result<(u16, u16), &str> {
-        let mut t = self.detect_touch(i2c);
-        while t.unwrap() == 0 || t == Err("Error getting touch data") {
-            t = self.detect_touch(i2c);
-        }
-
-        let num: u8;
-        match t {
-            Err(_e) => return Err("Error {} from fetching number of touches"),
-            Ok(n) => {
-                num = n;
-                if num != 0 {
-                    rprintln!("Number of touches in get_coordinates: {}", num);
-                };
-                if num > 0 {
-                    let t = self.get_touch(i2c, 1);
-                    return match t {
-                        Err(_e) => Err("Error fetching touch data"),
-                        Ok(n) => Ok((n.x, n.y)),
-                    };
-                } else {
-                    return Err("no");
-                }
-            }
-        }
+    pub fn get_coordinates(&mut self, i2c: &mut I2C) -> Result<(u16, u16), E> {
+        self.wait_touch_interrupt();
+        let _ntouch = self.detect_touch(i2c)?;
+        let pt = self.get_touch(i2c, 1)?;
+        Ok((pt.x, pt.y))
     }
 
 //    /// Logic for getting the gesture.
