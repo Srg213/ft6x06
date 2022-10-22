@@ -32,6 +32,9 @@ fn main() -> ! {
 
     rprintln!("Connecting to I2c");
 
+    #[cfg(feature = "stm32f413")]
+    let gpioc = perif.GPIOC.split();
+
     // STM32F412 touchscreen controller uses I2C1 module from embedded-hal.
     #[cfg(feature = "stm32f412")]
     let mut i2c = {
@@ -50,7 +53,6 @@ fn main() -> ! {
     // STM32F413 shares the same I2C bus for both audio driver and touchscreen controller. FMPI2C module from embedded-hal is used.
     #[cfg(feature = "stm32f413")]
     let mut i2c = {
-        let gpioc = perif.GPIOC.split();
         FMPI2c::new(
             perif.FMPI2C1,
             (
@@ -61,7 +63,16 @@ fn main() -> ! {
         )
     };
 
-    let mut touch = ft6x06::Ft6X06::new(&i2c, 0x38).unwrap();
+    #[cfg(feature = "stm32f412")]
+    let ts_int = {
+        let gpiog = perif.GPIOG.split();
+        gpiog.pg5.into_pull_down_input()
+    };
+
+    #[cfg(feature = "stm32f413")]
+    let ts_int = { gpioc.pc1.into_pull_down_input() };
+
+    let mut touch = ft6x06::Ft6X06::new(&i2c, 0x38, ts_int).unwrap();
 
     let tsc = touch.ts_calibration(&mut i2c, &mut delay);
     match tsc {
@@ -74,7 +85,7 @@ fn main() -> ! {
         let t = touch.detect_touch(&mut i2c);
         let mut num: u8 = 0;
         match t {
-            Err(e) => rprintln!("Error {} from fetching number of touches", e),
+            Err(_e) => rprintln!("Error from fetching number of touches"),
             Ok(n) => {
                 num = n;
                 if num != 0 {
@@ -98,4 +109,3 @@ fn main() -> ! {
         }
     }
 }
-

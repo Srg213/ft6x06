@@ -1,10 +1,9 @@
-
 #![no_main]
 #![no_std]
+#![allow(unused_variables)]
 
 /// An example to use access Ft6x06 driver and get coordinates for
 /// multiple touch points.
-
 use cortex_m;
 use cortex_m_rt::entry;
 use rtt_target::{rprintln, rtt_init_print};
@@ -19,6 +18,7 @@ use panic_semihosting;
 
 extern crate ft6x06;
 
+#[entry]
 fn main() -> ! {
     rtt_init_print!();
     rprintln!("Started");
@@ -47,9 +47,9 @@ fn main() -> ! {
         )
     };
 
+    let gpioc = perif.GPIOC.split();
     #[cfg(feature = "stm32f413")]
     let mut i2c = {
-        let gpioc = perif.GPIOC.split();
         FMPI2c::new(
             perif.FMPI2C1,
             (
@@ -60,7 +60,16 @@ fn main() -> ! {
         )
     };
 
-    let mut touch = ft6x06::Ft6X06::new(&i2c, 0x38).unwrap();
+    #[cfg(feature = "stm32f412")]
+    let ts_int = {
+        let gpiog = perif.GPIOG.split();
+        gpiog.pg5.into_pull_down_input()
+    };
+
+    #[cfg(feature = "stm32f413")]
+    let ts_int = { gpioc.pc1.into_pull_down_input() };
+
+    let mut touch = ft6x06::Ft6X06::new(&i2c, 0x38, ts_int).unwrap();
 
     let tsc = touch.ts_calibration(&mut i2c, &mut delay);
     match tsc {
@@ -73,7 +82,7 @@ fn main() -> ! {
         let t = touch.detect_touch(&mut i2c);
         let mut num: u8 = 0;
         match t {
-            Err(e) => rprintln!("Error {} from fetching number of touches", e),
+            Err(_e) => rprintln!("Error from fetching number of touches"),
             Ok(n) => {
                 num = n;
                 if num != 0 {

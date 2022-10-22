@@ -27,3 +27,20 @@ To run an example,
 -   haves some Rust tools installed and switch to nightly channel, 
 -   run the command:  `cargo run --features stm32f413,fsmc_lcd --example interface`
 
+
+### Version 0.1.1
+Issue- Sometimes, STM32F413 would not respond while initializing I2C bus.
+Perform a long hard reset, the FT66206 needs at least 5mS ...
+
+ - On the STM32F413 the touchscreen shares the reset GPIO pin w/ the LCD.
+ - The ST7789 driver uses a fast (10uS) reset.
+ - The touchscreen controller needs 5mS.
+ 
+### Version 0.1.2
+Issue- The touchscreen hangs after waiting for longer than 30 second for user input. The touchscreen controller was going to sleep after 30 seconds. 
+A solid fix appears to be to poll the touchscreen interrupt output to the stm32 and only attempt to read the registers when the touchscreen controller indicates there are touches waiting.
+
+The ft6x06 indicates when touches are ready by manipulating an interrupt line.
+By wait-polling this interrupt before reading the touch status registers we avoid spurious errors when the touchscreen controller becomes dormant (after not being touched for a while).
+
+ - Added function to Wait for the touchscreen interrupt to indicate touches

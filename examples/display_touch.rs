@@ -144,9 +144,13 @@ fn main() -> ! {
         )
     };
 
-    //ft6x06 driver
+    #[cfg(feature = "stm32f412")]
+    let ts_int = gpiog.pg5.into_pull_down_input();
 
-    let mut touch = ft6x06::Ft6X06::new(&i2c, 0x38).unwrap();
+    #[cfg(feature = "stm32f413")]
+    let ts_int = gpioc.pc1.into_pull_down_input();
+
+    let mut touch = ft6x06::Ft6X06::new(&i2c, 0x38, ts_int).unwrap();
 
     let tsc = touch.ts_calibration(&mut i2c, &mut delay);
     match tsc {
@@ -158,7 +162,7 @@ fn main() -> ! {
         let t = touch.detect_touch(&mut i2c);
         let mut num: u8 = 0;
         match t {
-            Err(e) => rprintln!("Error {} from fetching number of touches", e),
+            Err(_e) => rprintln!("Error from fetching number of touches"),
             Ok(n) => {
                 num = n;
                 if num != 0 {
@@ -183,7 +187,7 @@ fn main() -> ! {
                     // Circle with 1 pixel wide white stroke with top-left point at (10, 20) with a diameter of 3
                     Circle::new(
                         Point::new(
-                        	// The coordinates are flipped.
+                            // The coordinates are flipped.
                             <u16 as Into<i32>>::into(n.y),
                             240 - <u16 as Into<i32>>::into(n.x),
                         ),

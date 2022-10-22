@@ -1,8 +1,8 @@
 [package]
 name = "ft6x06"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
-authors = ["Shantanu Gaikwad"]
+authors = ["Shantanu Gaikwad", "Ken Sedgwick"]
 categories = ["embedded", "no-std", "hardware-support"]
 description = "A platform agnostic driver for the FT6x06 type touch panel controller used on STM32F4 series board."
 license = "MIT OR Apache-2.0"
@@ -16,7 +16,7 @@ keywords = [
 readme = "README.md"
 
 [dependencies]
-embedded-hal = "0.2.7"
+embedded-hal =  { version = "0.2.7", features = ["unproven"] }
 cortex-m = "0.7"
 heapless = {version = "0.7", optional =true}	
 panic-probe = { version = "0.2", features = ["print-rtt"] }

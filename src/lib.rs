@@ -4,44 +4,10 @@
 //! The Touchscreen driver for FT6X06 series touch panel controller
 //!
 //!
-//!
-//!
 //!  ### Example
 //!
 //! ##### Initializing the Ft6x06 driver struct
-//! 		let mut touch = ft6x06::Ft6X06::new(&i2c, ).unwrap();
-//!
-//!	To detect single touch, use the following snippet,
-//!
-//! 	   let t = touch.detect_touch(&mut i2c);
-//!        let mut num: u8 = 0;
-//!        match t {
-//!            Err(e) => rprintln!("Error {} from fetching number of touches", e),
-//!            Ok(n) => {
-//!                num = n;
-//!                if num != 0 {
-//!                    rprintln!("Number of touches: {}", num)
-//!                };
-//!            }
-//!        }
-//!
-//!        if num > 0 {
-//!            let t = touch.get_touch(&mut i2c, 1);
-//!            match t {
-//!                Err(_e) => rprintln!("Error fetching touch data"),
-//!                Ok(n) => rprintln!(
-//!                   "Touch: {:>3}x{:>3} - weight: {:>3} misc: {}",
-//!                    n.x,
-//!                    n.y,
-//!                    n.weight,
-//!                    n.misc
-//!                ),
-//!            }
-//!        }
-//!
-//!
-//!
-//!
+//! 		let mut touch = ft6x06::Ft6X06::new(i2c, addr, ts_int).unwrap();
 
 #![no_std]
 #![no_main]
@@ -54,7 +20,10 @@ use heapless::Vec;
 use crate::constant::*;
 use core::marker::PhantomData;
 use embedded_hal as hal;
-use hal::blocking::{delay::{DelayMs, DelayUs}, i2c};
+use hal::blocking::{
+    delay::{DelayMs, DelayUs},
+    i2c,
+};
 use hal::digital::v2::OutputPin;
 
 #[derive(Copy, Clone, Debug)]
@@ -146,7 +115,7 @@ pub enum GestureKind {
 // I removed its impl but kept the struct to give idea of how it is implementated in C.
 // This code for gestures is taken from ft5336 repo by bobgates,
 // but it seems control register values are not read in buffer of i2c bus.
-// So I created a algoritmic to detect gesture. The following struct just shows how 
+// So I created a algoritmic to detect gesture. The following struct just shows how
 // the gestures registers are to set.
 
 // Structure that holds the values for a gesture
@@ -195,7 +164,7 @@ pub struct Ft6X06<I2C, TouchInterruptPin> {
 pub fn long_hard_reset<'a, RST, DELAY>(
     rst: &'a mut RST,
     delay: &'a mut DELAY,
-) -> Result<(), &'a str> 
+) -> Result<(), &'a str>
 where
     RST: OutputPin,
     DELAY: DelayUs<u32>,
@@ -207,9 +176,10 @@ where
     Ok(())
 }
 
-impl<I2C, TouchInterruptPin: embedded_hal::digital::v2::InputPin, E> Ft6X06<I2C, TouchInterruptPin>
+impl<I2C, TouchInterruptPin: hal::digital::v2::InputPin, E> Ft6X06<I2C, TouchInterruptPin>
 where
-    I2C: i2c::WriteRead<Error = E> + i2c::Write<Error = E>, E: core::fmt::Debug
+    I2C: i2c::WriteRead<Error = E> + i2c::Write<Error = E>,
+    E: core::fmt::Debug,
 {
     /// Creates a new sensor associated with an I2C peripheral.
     ///
@@ -291,7 +261,11 @@ where
 
     /// Wait for the touchscreen interrupt to indicate touches
     pub fn wait_touch_interrupt(&self) {
-        while self.interrupt.is_high().unwrap_or_else(|_| panic!("trouble checking interrupt")) {}
+        while self
+            .interrupt
+            .is_high()
+            .unwrap_or_else(|_| panic!("trouble checking interrupt"))
+        {}
     }
 
     /// Run an internal calibration on the FT6X06
@@ -351,7 +325,9 @@ where
     pub fn detect_touch(&mut self, i2c: &mut I2C) -> Result<u8, E> {
         let ntouch = loop {
             let n = self.td_status(i2c)?;
-            if n > 0 { break n; }
+            if n > 0 {
+                break n;
+            }
         };
         assert!(ntouch <= FT6X06_MAX_NB_TOUCH as u8);
         Ok(ntouch)
@@ -457,57 +433,57 @@ where
         Ok((pt.x, pt.y))
     }
 
-//    /// Logic for getting the gesture.
-//    #[cfg(feature = "gesture")]
-//    pub fn gest_logic(&mut self, i2c: &mut I2C) -> Result<GestureKind, &str> {
-//        let mut vec1: Vec<u16, 100> = Vec::new();
-//        let mut vec2: Vec<u16, 100> = Vec::new();
-//
-//        for _i in 1..20 {
-//            let a = self.get_coordinates(i2c);
-//
-//           match a {
-//                Err(_e) => {
-//                    rprintln!("err");
-//                    continue;
-//                }
-//                Ok((x, y)) => {
-//                    vec1.push(x).expect("err");
-//                    vec2.push(y).expect("err");
-//                }
-//            };
-//        }
-//        let itr1 = vec1.iter();
-//        let itr2 = vec2.iter();
-//
-//        let max_x: u16 = *itr1.max().expect("err");
-//        let max_y: u16 = *itr2.max().expect("err");
-//
-//        let start_x: u16 = vec1[0];
-//        let start_y: u16 = vec2[0];
-//
-//        let end_x: u16 = vec1[19];
-//        let end_y: u16 = vec2[19];
-//
-//        let diff_x = end_x - start_x;
-//        let diff_y = end_y - start_y;
-//
-//        if diff_x > 100 || diff_y > 100 {
-//            return Err("wrong gestures.");
-//        } else if diff_x > diff_y {
-//            if diff_x > 0 {
-//                return Ok(GestureKind::Right);
-//            } else {
-//                return Ok(GestureKind::Left);
-//            }
-//        } else if diff_x < diff_y {
-//            if diff_y > 0 {
-//                return Ok(GestureKind::Up);
-//            } else {
-//                return Ok(GestureKind::Left);
-//            }
-//        } else {
-//            return Err("error gesture");
-//        }
-//    }
+    //    /// Logic for getting the gesture.
+    //    #[cfg(feature = "gesture")]
+    //    pub fn gest_logic(&mut self, i2c: &mut I2C) -> Result<GestureKind, &str> {
+    //        let mut vec1: Vec<u16, 100> = Vec::new();
+    //        let mut vec2: Vec<u16, 100> = Vec::new();
+    //
+    //        for _i in 1..20 {
+    //            let a = self.get_coordinates(i2c);
+    //
+    //           match a {
+    //                Err(_e) => {
+    //                    rprintln!("err");
+    //                    continue;
+    //                }
+    //                Ok((x, y)) => {
+    //                    vec1.push(x).expect("err");
+    //                    vec2.push(y).expect("err");
+    //                }
+    //            };
+    //        }
+    //        let itr1 = vec1.iter();
+    //        let itr2 = vec2.iter();
+    //
+    //        let max_x: u16 = *itr1.max().expect("err");
+    //        let max_y: u16 = *itr2.max().expect("err");
+    //
+    //        let start_x: u16 = vec1[0];
+    //        let start_y: u16 = vec2[0];
+    //
+    //        let end_x: u16 = vec1[19];
+    //        let end_y: u16 = vec2[19];
+    //
+    //        let diff_x = end_x - start_x;
+    //        let diff_y = end_y - start_y;
+    //
+    //        if diff_x > 100 || diff_y > 100 {
+    //            return Err("wrong gestures.");
+    //        } else if diff_x > diff_y {
+    //            if diff_x > 0 {
+    //                return Ok(GestureKind::Right);
+    //            } else {
+    //                return Ok(GestureKind::Left);
+    //            }
+    //        } else if diff_x < diff_y {
+    //            if diff_y > 0 {
+    //                return Ok(GestureKind::Up);
+    //            } else {
+    //                return Ok(GestureKind::Left);
+    //            }
+    //        } else {
+    //            return Err("error gesture");
+    //        }
+    //    }
 }
